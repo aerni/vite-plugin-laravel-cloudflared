@@ -12,7 +12,7 @@
     "homepage": "https://github.com/aerni/vite-plugin-cloudflared",
     "repository": {
         "type": "git",
-        "url": "https://github.com/aerni/vite-plugin-cloudflared"
+        "url": "git+https://github.com/aerni/vite-plugin-cloudflared.git"
     },
     "license": "MIT",
     "author": "Michael Aerni",
