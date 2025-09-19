@@ -1,6 +1,9 @@
 import { loadEnv, createLogger } from 'vite'
-import { spawn } from 'child_process'
+import { spawn, execFileSync } from 'child_process'
 import colors from 'picocolors'
+import fs from 'fs'
+import path from 'path'
+import { fileURLToPath } from 'url'
 
 /**
  * Vite plugin for integrating Cloudflare Tunnel with your development server
@@ -32,7 +35,7 @@ export default function cloudflared(config = {}) {
         const hmrHost = resolvedConfig.server.hmr.host
         const schema = resolvedConfig.server.https ? 'https' : 'http'
 
-        resolvedConfig.logger.info(`\n  ${colors.yellow(`${colors.bold('CLOUDFLARE TUNNEL')}`)}  ${colors.dim('plugin')} ${colors.bold('v1.0.0')}`)
+        resolvedConfig.logger.info(`\n  ${colors.yellow(`${colors.bold('CLOUDFLARED')} ${cloudflaredVersion()}`)}  ${colors.dim('plugin')} ${colors.bold(`v${pluginVersion()}`)}`)
         resolvedConfig.logger.info('')
         resolvedConfig.logger.info(`  ${colors.green('➜')}  ${colors.bold('Host')}: ${colors.cyan(`${schema}://${hmrHost}:${colors.bold(clientPort)}`)}`)
         resolvedConfig.logger.info('')
@@ -126,6 +129,26 @@ function resolvePluginConfig(config) {
     }
 
     return defaultConfig;
+}
+
+function cloudflaredVersion() {
+    try {
+        return execFileSync('cloudflared', ['--version'], { encoding: 'utf8' }).match(/cloudflared version (.*?) \(built/)[1];
+    } catch {
+        return '';
+    }
+}
+
+function pluginVersion() {
+    try {
+        return JSON.parse(fs.readFileSync(path.join(dirname(), '../package.json')).toString())?.version
+    } catch {
+        return ''
+    }
+}
+
+function dirname() {
+    return fileURLToPath(new URL('.', import.meta.url))
 }
 
 function stripLineLogLevel(line) {
