@@ -35,7 +35,7 @@ ingress:
     service: ${resolvedConfig.appUrl}
   - service: http_status:404
 `
-        const cloudflaredConfigPath = path.join(os.tmpdir(), `cloudflared-${process.pid}.yaml`)
+        const cloudflaredConfigPath = path.join(os.tmpdir(), `cloudflared-${resolvedConfig.tunnel}.yaml`)
 
         fs.writeFileSync(cloudflaredConfigPath, config)
 
@@ -51,11 +51,24 @@ ingress:
             fs.unlinkSync(cloudflaredConfigPath)
             cloudflaredConfigPath = null
         }
+
+    }
+
+    function cloudflaredProcessExists() {
+        const configPath = path.join(os.tmpdir(), `cloudflared-${resolvedConfig.tunnel}.yaml`)
+        return fs.existsSync(configPath)
     }
 
     function startCloudflaredProcess() {
         resolvedConfig.logger.info(`\n  ${colors.yellow(`${colors.bold('CLOUDFLARED')} ${cloudflaredVersion()}`)}  ${colors.dim('plugin')} ${colors.bold(`v${pluginVersion()}`)}`)
         resolvedConfig.logger.info('')
+
+        if (cloudflaredProcessExists()) {
+            resolvedConfig.logger.error(`  ${colors.red(`➜  ${colors.bold('Error:')}`)} A cloudflared process for tunnel ${colors.cyan(`${resolvedConfig.tunnel}`)} is already running.`)
+            resolvedConfig.logger.error(`  ${colors.red('➜')}  Stop the existing process first if you want to start a new one.`)
+            return
+        }
+
         resolvedConfig.logger.info(`  ${colors.green('➜')}  ${colors.bold('Public URL')}: ${colors.cyan(`${resolvedConfig.cloudflaredAppUrl}`)}`)
         resolvedConfig.logger.info('')
 
