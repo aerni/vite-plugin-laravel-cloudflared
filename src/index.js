@@ -4,11 +4,12 @@ import colors from 'picocolors'
 import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
+import os from 'os'
 
 /**
  * Vite plugin for integrating Cloudflare Tunnel with your development server
- * @param {string|Object} config - Configuration options or host string
- * @param {string} config.host - The Cloudflare tunnel host
+ * @param {string|Object} config - Configuration options or tunnel string
+ * @param {string} config.tunnel - The Cloudflare tunnel ID
  * @param {string} config.logLevel - Log level (default: 'warn')
  * @returns {Object} Vite plugin object
  */
@@ -16,32 +17,52 @@ export default function cloudflared(config = {}) {
     const pluginConfig = resolvePluginConfig(config)
 
     let resolvedConfig
+    let cloudflaredConfigPath
     let cloudflaredProcess
-    let exitHandlersBound = false
     let cleaningUpCloudflaredProcess = false
+    let exitHandlersBound = false
 
     const logger = createLogger(pluginConfig.logLevel, {
         prefix: '[cloudflared]',
     })
 
+    function createCloudflaredConfig() {
+        const config = `tunnel: ${resolvedConfig.tunnel}
+credentials-file: ${path.join(os.homedir(), '.cloudflared', `${resolvedConfig.tunnel}.json`)}
+
+ingress:
+  - hostname: ${new URL(resolvedConfig.cloudflaredAppUrl).hostname}
+    service: ${resolvedConfig.appUrl}
+  - service: http_status:404
+`
+        const cloudflaredConfigPath = path.join(os.tmpdir(), `cloudflared-${process.pid}.yaml`)
+
+        fs.writeFileSync(cloudflaredConfigPath, config)
+
+        return cloudflaredConfigPath
+    }
+
     function cleanupCloudflaredProcess() {
         cleaningUpCloudflaredProcess = true
         cloudflaredProcess?.kill()
         cloudflaredProcess = null
+
+        if (cloudflaredConfigPath && fs.existsSync(cloudflaredConfigPath)) {
+            fs.unlinkSync(cloudflaredConfigPath)
+            cloudflaredConfigPath = null
+        }
     }
 
     function startCloudflaredProcess() {
-        const clientPort = resolvedConfig.server.hmr.clientPort
-        const hmrHost = resolvedConfig.server.hmr.host
-        const schema = resolvedConfig.server.https ? 'https' : 'http'
-
         resolvedConfig.logger.info(`\n  ${colors.yellow(`${colors.bold('CLOUDFLARED')} ${cloudflaredVersion()}`)}  ${colors.dim('plugin')} ${colors.bold(`v${pluginVersion()}`)}`)
         resolvedConfig.logger.info('')
-        resolvedConfig.logger.info(`  ${colors.green('➜')}  ${colors.bold('Host')}: ${colors.cyan(`${schema}://${hmrHost}:${colors.bold(clientPort)}`)}`)
+        resolvedConfig.logger.info(`  ${colors.green('➜')}  ${colors.bold('Public URL')}: ${colors.cyan(`${resolvedConfig.cloudflaredAppUrl}`)}`)
         resolvedConfig.logger.info('')
 
+        cloudflaredConfigPath = createCloudflaredConfig()
+
         const cmd = 'cloudflared'
-        const args = ['tunnel', 'run']
+        const args = ['tunnel', '--config', cloudflaredConfigPath, 'run']
 
         cloudflaredProcess = spawn(cmd, args, { stdio: ['ignore', 'ignore', 'pipe'] })
 
@@ -62,7 +83,7 @@ export default function cloudflared(config = {}) {
                 return
             }
 
-            logger.error('Failed to start Cloudflare Tunnel:', error.message)
+            logger.error('Failed to start cloudflared process:', error.message)
         })
     }
 
@@ -72,21 +93,26 @@ export default function cloudflared(config = {}) {
             return command === 'serve' && loadEnv(mode, process.cwd(), '').CLOUDFLARED_ENABLED === 'true'
         },
         config(config, { mode }) {
-            const hmrHost = pluginConfig.host || loadEnv(mode, process.cwd(), '').CLOUDFLARED_HOST
+            const env = loadEnv(mode, process.cwd(), '')
+            config.tunnel = pluginConfig.tunnel || env.CLOUDFLARED_TUNNEL
+            config.cloudflaredAppUrl = env.CLOUDFLARED_APP_URL
+            config.appUrl = env.APP_URL
 
-            if (!hmrHost) {
-                throw new Error('cloudflared-vite-plugin: missing configuration for "host"')
+            if (!config.tunnel) {
+                throw new Error('cloudflared-vite-plugin: missing configuration for "tunnel"')
+            }
+
+            if (!config.cloudflaredAppUrl) {
+                throw new Error('cloudflared-vite-plugin: make sure to set CLOUDFLARE_APP_URL')
             }
 
             return {
                 server: {
-                    https: false,
-                    cors: true,
-                    hmr: {
-                        protocol: "wss",
-                        clientPort: 443,
-                        host: hmrHost,
-                    }
+                    cors: {
+                        origin: [
+                            env.CLOUDFLARED_APP_URL,
+                        ],
+                    },
                 },
             }
         },
@@ -120,12 +146,12 @@ export default function cloudflared(config = {}) {
 
 function resolvePluginConfig(config) {
     let defaultConfig = {
-        host: config.host,
+        tunnel: config.tunnel,
         logLevel: config.logLevel ?? 'warn',
     };
 
     if (typeof config === 'string') {
-        defaultConfig = { ...defaultConfig, host: config };
+        defaultConfig = { ...defaultConfig, tunnel: config };
     }
 
     return defaultConfig;
