@@ -31,9 +31,9 @@ export default function cloudflared(config = {}) {
 credentials-file: ${path.join(os.homedir(), '.cloudflared', `${resolvedConfig.tunnel}.json`)}
 
 ingress:
-  - hostname: ${resolvedConfig.cloudflaredViteHost}
+  - hostname: ${resolvedConfig.viteHost}
     service: ${resolvedConfig.viteUrl}
-  - hostname: ${resolvedConfig.cloudflaredAppHost}
+  - hostname: ${resolvedConfig.appHost}
     service: ${resolvedConfig.appUrl}
   - service: http_status:404
 `
@@ -64,7 +64,7 @@ ingress:
 
     function linkWithHerd() {
         try {
-            execFileSync('herd', ['link', resolvedConfig.cloudflaredAppHost], { cwd: process.cwd(), stdio: 'pipe' })
+            execFileSync('herd', ['link', resolvedConfig.appHost], { cwd: process.cwd(), stdio: 'pipe' })
         } catch (error) {
             resolvedConfig.logger.warn(`  ${colors.yellow('⚠')}  ${colors.bold('Herd link failed')}: ${error.message}`)
         }
@@ -72,7 +72,7 @@ ingress:
 
     function unlinkFromHerd() {
         try {
-            execFileSync('herd', ['unlink', resolvedConfig.cloudflaredAppHost], { cwd: process.cwd(), stdio: 'pipe' })
+            execFileSync('herd', ['unlink', resolvedConfig.appHost], { cwd: process.cwd(), stdio: 'pipe' })
         } catch (error) {
             resolvedConfig.logger.warn(`  ${colors.yellow('⚠')}  ${colors.bold('Herd unlink failed')}: ${error.message}`)
         }
@@ -135,8 +135,8 @@ ingress:
             const env = loadEnv(mode, process.cwd(), '')
             config.tunnel = pluginConfig.tunnel || env.CLOUDFLARED_TUNNEL
             config.cloudflaredAppUrl = env.CLOUDFLARED_APP_URL
-            config.cloudflaredAppHost = new URL(env.CLOUDFLARED_APP_URL).hostname
-            config.cloudflaredViteHost = `vite-${config.cloudflaredAppHost}`
+            config.appHost = new URL(env.CLOUDFLARED_APP_URL).hostname
+            config.viteHost = `vite-${config.appHost}`
             config.appUrl = env.APP_URL
 
             if (!config.tunnel) {
@@ -154,7 +154,7 @@ ingress:
                     hmr: {
                         protocol: "wss",
                         clientPort: 443,
-                        host: config.cloudflaredViteHost,
+                        host: config.viteHost,
                     },
                 },
             }
