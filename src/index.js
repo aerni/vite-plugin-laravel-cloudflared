@@ -169,20 +169,20 @@ function resolvePluginConfig(config) {
     let defaultConfig = {
         tunnel: config.tunnel,
         logLevel: config.logLevel ?? 'warn',
-    };
-
-    if (typeof config === 'string') {
-        defaultConfig = { ...defaultConfig, tunnel: config };
     }
 
-    return defaultConfig;
+    if (typeof config === 'string') {
+        defaultConfig = { ...defaultConfig, tunnel: config }
+    }
+
+    return defaultConfig
 }
 
 function cloudflaredVersion() {
     try {
-        return execFileSync('cloudflared', ['--version'], { encoding: 'utf8' }).match(/cloudflared version (.*?) \(built/)[1];
+        return execFileSync('cloudflared', ['--version'], { encoding: 'utf8' }).match(/cloudflared version (.*?) \(built/)[1]
     } catch {
-        return '';
+        return ''
     }
 }
 
