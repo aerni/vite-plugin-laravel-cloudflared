@@ -135,7 +135,7 @@ ingress:
             const env = loadEnv(mode, process.cwd(), '')
             config.tunnel = pluginConfig.tunnel || env.CLOUDFLARED_TUNNEL
             config.cloudflaredAppUrl = env.CLOUDFLARED_APP_URL
-            config.appHost = new URL(env.CLOUDFLARED_APP_URL).hostname
+            config.appHost = new URL(config.cloudflaredAppUrl).hostname
             config.viteHost = `vite-${config.appHost}`
             config.appUrl = env.APP_URL
 
