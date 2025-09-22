@@ -133,19 +133,21 @@ ingress:
         },
         config(config, { mode }) {
             const env = loadEnv(mode, process.cwd(), '')
+
             config.tunnel = pluginConfig.tunnel || env.CLOUDFLARED_TUNNEL
             config.cloudflaredAppUrl = env.CLOUDFLARED_APP_URL
-            config.appHost = new URL(config.cloudflaredAppUrl).hostname
-            config.viteHost = `vite-${config.appHost}`
-            config.appUrl = env.APP_URL
 
             if (!config.tunnel) {
                 throw new Error('cloudflared-vite-plugin: missing configuration for "tunnel"')
             }
 
             if (!config.cloudflaredAppUrl) {
-                throw new Error('cloudflared-vite-plugin: make sure to set CLOUDFLARE_APP_URL')
+                throw new Error('Ensure to set CLOUDFLARED_APP_URL in your env file')
             }
+
+            config.appHost = new URL(config.cloudflaredAppUrl).hostname
+            config.viteHost = `vite-${config.appHost}`
+            config.appUrl = env.APP_URL
 
             return {
                 server: {
