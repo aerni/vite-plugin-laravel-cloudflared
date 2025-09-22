@@ -31,10 +31,13 @@ export default function cloudflared(config = {}) {
 credentials-file: ${path.join(os.homedir(), '.cloudflared', `${resolvedConfig.tunnel}.json`)}
 
 ingress:
-  - hostname: ${new URL(resolvedConfig.cloudflaredAppUrl).hostname}
+  - hostname: ${resolvedConfig.cloudflaredViteHost}
+    service: ${resolvedConfig.viteUrl}
+  - hostname: ${resolvedConfig.cloudflaredAppHost}
     service: ${resolvedConfig.appUrl}
   - service: http_status:404
 `
+
         const cloudflaredConfigPath = path.join(os.tmpdir(), `cloudflared-${resolvedConfig.tunnel}.yaml`)
 
         fs.writeFileSync(cloudflaredConfigPath, config)
@@ -109,6 +112,9 @@ ingress:
             const env = loadEnv(mode, process.cwd(), '')
             config.tunnel = pluginConfig.tunnel || env.CLOUDFLARED_TUNNEL
             config.cloudflaredAppUrl = env.CLOUDFLARED_APP_URL
+            config.cloudflaredAppHost = new URL(env.CLOUDFLARED_APP_URL).hostname
+            config.cloudflaredViteHost = `vite-${config.cloudflaredAppHost}`
+            config.viteUrl = 'http://127.0.0.1:5173'
             config.appUrl = env.APP_URL
 
             if (!config.tunnel) {
@@ -121,10 +127,12 @@ ingress:
 
             return {
                 server: {
-                    cors: {
-                        origin: [
-                            env.CLOUDFLARED_APP_URL,
-                        ],
+                    https: false,
+                    cors: true,
+                    hmr: {
+                        protocol: "wss",
+                        clientPort: 443,
+                        host: config.cloudflaredViteHost,
                     },
                 },
             }
