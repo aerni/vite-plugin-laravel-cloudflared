@@ -137,7 +137,6 @@ ingress:
             config.cloudflaredAppUrl = env.CLOUDFLARED_APP_URL
             config.cloudflaredAppHost = new URL(env.CLOUDFLARED_APP_URL).hostname
             config.cloudflaredViteHost = `vite-${config.cloudflaredAppHost}`
-            config.viteUrl = 'http://127.0.0.1:5173'
             config.appUrl = env.APP_URL
 
             if (!config.tunnel) {
@@ -168,6 +167,7 @@ ingress:
         },
         configureServer(server) {
             server.httpServer?.once('listening', () => {
+                resolvedConfig.viteUrl = viteServerUrl(server)
                 setTimeout(() => startCloudflaredProcess(), 200)
             })
 
@@ -219,6 +219,15 @@ function pluginVersion() {
 
 function dirname() {
     return fileURLToPath(new URL('.', import.meta.url))
+}
+
+function viteServerUrl(server) {
+    const address = server.httpServer.address()
+    const host = address.address === '::' ? '127.0.0.1' : address.address
+    const port = address.port
+    const protocol = server.config.server?.https ? 'https' : 'http'
+
+    return `${protocol}://${host}:${port}`
 }
 
 function stripLineLogLevel(line) {
