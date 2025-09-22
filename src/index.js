@@ -59,6 +59,23 @@ ingress:
             cloudflaredConfigPath = null
         }
 
+        unlinkFromHerd()
+    }
+
+    function linkWithHerd() {
+        try {
+            execFileSync('herd', ['link', resolvedConfig.cloudflaredAppHost], { cwd: process.cwd(), stdio: 'pipe' })
+        } catch (error) {
+            resolvedConfig.logger.warn(`  ${colors.yellow('⚠')}  ${colors.bold('Herd link failed')}: ${error.message}`)
+        }
+    }
+
+    function unlinkFromHerd() {
+        try {
+            execFileSync('herd', ['unlink', resolvedConfig.cloudflaredAppHost], { cwd: process.cwd(), stdio: 'pipe' })
+        } catch (error) {
+            resolvedConfig.logger.warn(`  ${colors.yellow('⚠')}  ${colors.bold('Herd unlink failed')}: ${error.message}`)
+        }
     }
 
     function cloudflaredProcessExists() {
@@ -75,6 +92,8 @@ ingress:
             resolvedConfig.logger.error(`  ${colors.red('➜')}  Stop the existing process first if you want to start a new one.`)
             return
         }
+
+        linkWithHerd()
 
         resolvedConfig.logger.info(`  ${colors.green('➜')}  ${colors.bold('Public URL')}: ${colors.cyan(`${resolvedConfig.cloudflaredAppUrl}`)}`)
         resolvedConfig.logger.info('')
