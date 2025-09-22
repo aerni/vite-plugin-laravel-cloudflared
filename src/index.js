@@ -46,6 +46,10 @@ ingress:
     }
 
     function cleanupCloudflaredProcess() {
+        if (cleaningUpCloudflaredProcess) {
+            return
+        }
+
         cleaningUpCloudflaredProcess = true
         cloudflaredProcess?.kill()
         cloudflaredProcess = null
