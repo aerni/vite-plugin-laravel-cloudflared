@@ -5,16 +5,17 @@ import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import os from 'os'
+import yaml from 'js-yaml'
 
 /**
  * Vite plugin for integrating Cloudflare Tunnel with your development server
  * @param {string|Object} config - Configuration options or tunnel string
- * @param {string} config.tunnel - The Cloudflare tunnel ID
  * @param {string} config.logLevel - Log level (default: 'warn')
  * @returns {Object} Vite plugin object
  */
 export default function cloudflared(config = {}) {
     const pluginConfig = resolvePluginConfig(config)
+    const projectConfig = resolveProjectConfig()
 
     let resolvedConfig
     let cloudflaredConfigPath
@@ -38,7 +39,7 @@ ingress:
   - service: http_status:404
 `
 
-        const cloudflaredConfigPath = path.join(os.tmpdir(), `cloudflared-${resolvedConfig.tunnel}.yaml`)
+        const cloudflaredConfigPath = path.join(os.homedir(), '.cloudflared', `${resolvedConfig.tunnel}.yaml`)
 
         fs.writeFileSync(cloudflaredConfigPath, config)
 
@@ -79,7 +80,7 @@ ingress:
     }
 
     function cloudflaredProcessExists() {
-        const configPath = path.join(os.tmpdir(), `cloudflared-${resolvedConfig.tunnel}.yaml`)
+        const configPath = path.join(os.homedir(), '.cloudflared', `${resolvedConfig.tunnel}.yaml`)
         return fs.existsSync(configPath)
     }
 
@@ -134,15 +135,18 @@ ingress:
         config(config, { mode }) {
             const env = loadEnv(mode, process.cwd(), '')
 
-            config.tunnel = pluginConfig.tunnel || env.CLOUDFLARED_TUNNEL
+            config.tunnel = projectConfig.tunnel
+            // TODO: The CLOUDFLARED_APP_URL has to match the .cloudflared.yaml hostname anyway. Should we just extract it from there?
+            // The only reason we've got this env variable is that we need to set it in the CloudflaredServiceProvider. But we might as well use the .cloudflared.yaml config there too.
+            // And then we only need to extract the http or https from the original APP_URL, as this aligns with the Herd site.
             config.cloudflaredAppUrl = env.CLOUDFLARED_APP_URL
 
-            if (!config.tunnel) {
-                throw new Error('cloudflared-vite-plugin: missing configuration for "tunnel"')
+            if (! config.tunnel) {
+                throw new Error('cloudflared-vite-plugin: missing configuration for "tunnel". Please specify it in the .cloudflared.yaml file.')
             }
 
             if (!config.cloudflaredAppUrl) {
-                throw new Error('Ensure to set CLOUDFLARED_APP_URL in your env file')
+                throw new Error('Ensure to set CLOUDFLARED_APP_URL in your .env file')
             }
 
             config.appHost = new URL(config.cloudflaredAppUrl).hostname
@@ -191,16 +195,19 @@ ingress:
 }
 
 function resolvePluginConfig(config) {
-    let defaultConfig = {
-        tunnel: config.tunnel,
+    return {
         logLevel: config.logLevel ?? 'warn',
     }
+}
 
-    if (typeof config === 'string') {
-        defaultConfig = { ...defaultConfig, tunnel: config }
+function resolveProjectConfig() {
+    const configPath = path.join(process.cwd(), '.cloudflared.yaml')
+
+    if (!fs.existsSync(configPath)) {
+        throw new Error('cloudflared-vite-plugin: missing configuration file ".cloudflared.yaml". Please run "php artisan cloudflared:install" first.')
     }
 
-    return defaultConfig
+    return yaml.load(fs.readFileSync(configPath, 'utf8'))
 }
 
 function cloudflaredVersion() {
