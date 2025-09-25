@@ -34,8 +34,8 @@ credentials-file: ${path.join(os.homedir(), '.cloudflared', `${resolvedConfig.tu
 ingress:
   - hostname: ${resolvedConfig.viteHost}
     service: ${resolvedConfig.viteUrl}
-  - hostname: ${resolvedConfig.appHost}
-    service: ${resolvedConfig.appUrl}
+  - hostname: ${resolvedConfig.herdHost}
+    service: ${resolvedConfig.herdUrl}
   - service: http_status:404
 `
 
@@ -65,7 +65,7 @@ ingress:
 
     function linkWithHerd() {
         try {
-            execFileSync('herd', ['link', resolvedConfig.appHost], { cwd: process.cwd(), stdio: 'pipe' })
+            execFileSync('herd', ['link', resolvedConfig.herdHost], { cwd: process.cwd(), stdio: 'pipe' })
         } catch (error) {
             resolvedConfig.logger.warn(`  ${colors.yellow('⚠')}  ${colors.bold('Herd link failed')}: ${error.message}`)
         }
@@ -73,7 +73,7 @@ ingress:
 
     function unlinkFromHerd() {
         try {
-            execFileSync('herd', ['unlink', resolvedConfig.appHost], { cwd: process.cwd(), stdio: 'pipe' })
+            execFileSync('herd', ['unlink', resolvedConfig.herdHost], { cwd: process.cwd(), stdio: 'pipe' })
         } catch (error) {
             resolvedConfig.logger.warn(`  ${colors.yellow('⚠')}  ${colors.bold('Herd unlink failed')}: ${error.message}`)
         }
@@ -96,7 +96,7 @@ ingress:
 
         linkWithHerd()
 
-        resolvedConfig.logger.info(`  ${colors.green('➜')}  ${colors.bold('Public URL')}: ${colors.cyan(`${resolvedConfig.cloudflaredAppUrl}`)}`)
+        resolvedConfig.logger.info(`  ${colors.green('➜')}  ${colors.bold('Public URL')}: ${colors.cyan(`${new URL(resolvedConfig.herdUrl).protocol}//${resolvedConfig.herdHost}`)}`)
         resolvedConfig.logger.info('')
 
         cloudflaredConfigPath = createCloudflaredConfig()
@@ -136,22 +136,15 @@ ingress:
             const env = loadEnv(mode, process.cwd(), '')
 
             config.tunnel = projectConfig.tunnel
-            // TODO: The CLOUDFLARED_APP_URL has to match the .cloudflared.yaml hostname anyway. Should we just extract it from there?
-            // The only reason we've got this env variable is that we need to set it in the CloudflaredServiceProvider. But we might as well use the .cloudflared.yaml config there too.
-            // And then we only need to extract the http or https from the original APP_URL, as this aligns with the Herd site.
-            config.cloudflaredAppUrl = env.CLOUDFLARED_APP_URL
 
             if (! config.tunnel) {
                 throw new Error('cloudflared-vite-plugin: missing configuration for "tunnel". Please specify it in the .cloudflared.yaml file.')
             }
 
-            if (!config.cloudflaredAppUrl) {
-                throw new Error('Ensure to set CLOUDFLARED_APP_URL in your .env file')
-            }
-
-            config.appHost = new URL(config.cloudflaredAppUrl).hostname
-            config.viteHost = `vite-${config.appHost}`
-            config.appUrl = env.APP_URL
+            config.viteHost = `vite-${config.herdHost}`
+            config.herdHost = projectConfig.hostname
+            config.herdUrl = env.APP_URL
+            config.cloudflaredAppUrl = `${new URL(config.herdUrl).protocol}//${config.herdHost}`
 
             return {
                 server: {
