@@ -15,10 +15,9 @@ import yaml from 'js-yaml'
  */
 export default function cloudflared(config = {}) {
     const pluginConfig = resolvePluginConfig(config)
-    const projectConfig = resolveProjectConfig()
+    const cloudflaredConfig = resolveCloudflaredConfig()
 
     let resolvedConfig
-    let cloudflaredConfigPath
     let cloudflaredProcess
     let cleaningUpCloudflaredProcess = false
     let exitHandlersBound = false
@@ -26,25 +25,6 @@ export default function cloudflared(config = {}) {
     const logger = createLogger(pluginConfig.logLevel, {
         prefix: '[cloudflared]',
     })
-
-    function createCloudflaredConfig() {
-        const config = `tunnel: ${resolvedConfig.tunnel}
-credentials-file: ${path.join(os.homedir(), '.cloudflared', `${resolvedConfig.tunnel}.json`)}
-
-ingress:
-  - hostname: ${resolvedConfig.viteHost}
-    service: ${resolvedConfig.viteUrl}
-  - hostname: ${resolvedConfig.herdHost}
-    service: ${resolvedConfig.herdUrl}
-  - service: http_status:404
-`
-
-        const cloudflaredConfigPath = path.join(os.homedir(), '.cloudflared', `${resolvedConfig.tunnel}.yaml`)
-
-        fs.writeFileSync(cloudflaredConfigPath, config)
-
-        return cloudflaredConfigPath
-    }
 
     function cleanupCloudflaredProcess() {
         if (cleaningUpCloudflaredProcess) {
@@ -55,54 +35,37 @@ ingress:
         cloudflaredProcess?.kill()
         cloudflaredProcess = null
 
-        if (cloudflaredConfigPath && fs.existsSync(cloudflaredConfigPath)) {
-            fs.unlinkSync(cloudflaredConfigPath)
-            cloudflaredConfigPath = null
+        if (fs.existsSync(cloudflaredConfig.cloudflaredConfigPath)) {
+            fs.unlinkSync(cloudflaredConfig.cloudflaredConfigPath)
         }
-
-        unlinkFromHerd()
     }
 
     function linkWithHerd() {
         try {
-            execFileSync('herd', ['link', resolvedConfig.herdHost], { cwd: process.cwd(), stdio: 'pipe' })
+            execFileSync('herd', ['link', cloudflaredConfig.herdHost], { cwd: process.cwd(), stdio: 'pipe' })
         } catch (error) {
             resolvedConfig.logger.warn(`  ${colors.yellow('⚠')}  ${colors.bold('Herd link failed')}: ${error.message}`)
         }
-    }
-
-    function unlinkFromHerd() {
-        try {
-            execFileSync('herd', ['unlink', resolvedConfig.herdHost], { cwd: process.cwd(), stdio: 'pipe' })
-        } catch (error) {
-            resolvedConfig.logger.warn(`  ${colors.yellow('⚠')}  ${colors.bold('Herd unlink failed')}: ${error.message}`)
-        }
-    }
-
-    function cloudflaredProcessExists() {
-        const configPath = path.join(os.homedir(), '.cloudflared', `${resolvedConfig.tunnel}.yaml`)
-        return fs.existsSync(configPath)
     }
 
     function startCloudflaredProcess() {
         resolvedConfig.logger.info(`\n  ${colors.yellow(`${colors.bold('CLOUDFLARED')} ${cloudflaredVersion()}`)}  ${colors.dim('plugin')} ${colors.bold(`v${pluginVersion()}`)}`)
         resolvedConfig.logger.info('')
 
-        if (cloudflaredProcessExists()) {
-            resolvedConfig.logger.error(`  ${colors.red(`➜  ${colors.bold('Error:')}`)} A cloudflared process for tunnel ${colors.cyan(`${resolvedConfig.tunnel}`)} is already running.`)
+        if (fs.existsSync(cloudflaredConfig.cloudflaredConfigPath)) {
+            resolvedConfig.logger.error(`  ${colors.red(`➜  ${colors.bold('Error:')}`)} A cloudflared process for tunnel ${colors.cyan(`${cloudflaredConfig.tunnel}`)} is already running.`)
             resolvedConfig.logger.error(`  ${colors.red('➜')}  Stop the existing process first if you want to start a new one.`)
             return
         }
 
+        createCloudflaredConfigFile(cloudflaredConfig)
         linkWithHerd()
 
-        resolvedConfig.logger.info(`  ${colors.green('➜')}  ${colors.bold('Public URL')}: ${colors.cyan(`${new URL(resolvedConfig.herdUrl).protocol}//${resolvedConfig.herdHost}`)}`)
+        resolvedConfig.logger.info(`  ${colors.green('➜')}  ${colors.bold('Public URL')}: ${colors.cyan(`${cloudflaredConfig.cloudflaredUrl}`)}`)
         resolvedConfig.logger.info('')
 
-        cloudflaredConfigPath = createCloudflaredConfig()
-
         const cmd = 'cloudflared'
-        const args = ['tunnel', '--config', cloudflaredConfigPath, 'run']
+        const args = ['tunnel', '--config', cloudflaredConfig.cloudflaredConfigPath, 'run']
 
         cloudflaredProcess = spawn(cmd, args, { stdio: ['ignore', 'ignore', 'pipe'] })
 
@@ -135,16 +98,8 @@ ingress:
         config(config, { mode }) {
             const env = loadEnv(mode, process.cwd(), '')
 
-            config.tunnel = projectConfig.tunnel
-
-            if (! config.tunnel) {
-                throw new Error('cloudflared-vite-plugin: missing configuration for "tunnel". Please specify it in the .cloudflared.yaml file.')
-            }
-
-            config.viteHost = `vite-${config.herdHost}`
-            config.herdHost = projectConfig.hostname
-            config.herdUrl = env.APP_URL
-            config.cloudflaredAppUrl = `${new URL(config.herdUrl).protocol}//${config.herdHost}`
+            cloudflaredConfig.herdUrl = env.APP_URL
+            cloudflaredConfig.cloudflaredUrl = `${new URL(env.APP_URL).protocol}//${cloudflaredConfig.herdHost}`
 
             return {
                 server: {
@@ -153,7 +108,7 @@ ingress:
                     hmr: {
                         protocol: "wss",
                         clientPort: 443,
-                        host: config.viteHost,
+                        host: cloudflaredConfig.viteHost,
                     },
                 },
             }
@@ -166,7 +121,7 @@ ingress:
         },
         configureServer(server) {
             server.httpServer?.once('listening', () => {
-                resolvedConfig.viteUrl = viteServerUrl(server)
+                cloudflaredConfig.viteUrl = viteServerUrl(server)
                 setTimeout(() => startCloudflaredProcess(), 200)
             })
 
@@ -193,14 +148,53 @@ function resolvePluginConfig(config) {
     }
 }
 
-function resolveProjectConfig() {
+function resolveCloudflaredConfig() {
     const configPath = path.join(process.cwd(), '.cloudflared.yaml')
 
     if (!fs.existsSync(configPath)) {
-        throw new Error('cloudflared-vite-plugin: missing configuration file ".cloudflared.yaml". Please run "php artisan cloudflared:install" first.')
+        throw new Error('cloudflared-vite-plugin: missing configuration file ".cloudflared.yaml". Create a new tunnel with "php artisan cloudflared:install".')
     }
 
-    return yaml.load(fs.readFileSync(configPath, 'utf8'))
+    const config = yaml.load(fs.readFileSync(configPath, 'utf8'))
+
+    if (!config.tunnel) {
+        throw new Error('cloudflared-vite-plugin: missing "tunnel" configuration in the ".cloudflared.yaml" file.')
+    }
+
+    if (!config.hostname) {
+        throw new Error('cloudflared-vite-plugin: missing "hostname" configuration in the ".cloudflared.yaml" file.')
+    }
+
+    const credentialsFilePath = path.join(os.homedir(), '.cloudflared', `${config.tunnel}.json`)
+
+    if (!fs.existsSync(credentialsFilePath)) {
+        throw new Error(`cloudflared-vite-plugin: The credentials file for tunnel "${config.tunnel}" does not exist. Create a new tunnel by running "php artisan cloudflared:install".`)
+    }
+
+    return {
+        'tunnel': config.tunnel,
+        'herdHost': config.hostname,
+        'herdUrl': null,
+        'viteHost': `vite-${config.hostname}`,
+        'viteUrl': null,
+        'cloudflaredUrl': null,
+        'credentialsFilePath': credentialsFilePath,
+        'cloudflaredConfigPath': path.join(os.homedir(), '.cloudflared', `${config.tunnel}.yaml`),
+    }
+}
+
+function createCloudflaredConfigFile(config) {
+    const cloudflaredConfigContents = `tunnel: ${config.tunnel}
+credentials-file: ${config.credentialsFilePath}
+
+ingress:
+  - hostname: ${config.viteHost}
+    service: ${config.viteUrl}
+  - hostname: ${config.herdHost}
+    service: ${config.herdUrl}
+  - service: http_status:404
+`
+    fs.writeFileSync(config.cloudflaredConfigPath, cloudflaredConfigContents)
 }
 
 function cloudflaredVersion() {
