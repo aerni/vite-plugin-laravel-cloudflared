@@ -1,5 +1,5 @@
 {
-    "name": "@aerni/vite-plugin-cloudflared",
+    "name": "@aerni/vite-plugin-laravel-cloudflared",
     "version": "0.1.0",
     "description": "A Vite plugin for integrating Cloudflare Tunnel with your development server",
     "keywords": [
@@ -9,10 +9,10 @@
         "cloudflared",
         "tunnel"
     ],
-    "homepage": "https://github.com/aerni/vite-plugin-cloudflared",
+    "homepage": "https://github.com/aerni/vite-plugin-laravel-cloudflared",
     "repository": {
         "type": "git",
-        "url": "git+https://github.com/aerni/vite-plugin-cloudflared.git"
+        "url": "git+https://github.com/aerni/vite-plugin-laravel-cloudflared.git"
     },
     "license": "MIT",
     "author": "Michael Aerni",

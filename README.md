@@ -1,4 +1,4 @@
-# vite-plugin-cloudflared
+# vite-plugin-laravel-cloudflared
 
 A Vite plugin for integrating Cloudflare Tunnel with your development server, enabling secure HTTPS tunneling during development with Hot Module Replacement (HMR) support.
 
@@ -14,11 +14,11 @@ A Vite plugin for integrating Cloudflare Tunnel with your development server, en
 ## Installation
 
 ```bash
-npm install vite-plugin-cloudflared
+npm install vite-plugin-laravel-cloudflared
 # or
-yarn add vite-plugin-cloudflared
+yarn add vite-plugin-laravel-cloudflared
 # or
-pnpm add vite-plugin-cloudflared
+pnpm add vite-plugin-laravel-cloudflared
 ```
 
 ## Prerequisites
@@ -33,7 +33,7 @@ Add the plugin to your `vite.config.js`:
 
 ```javascript
 import { defineConfig } from 'vite'
-import cloudflared from 'vite-plugin-cloudflared'
+import cloudflared from 'vite-plugin-laravel-cloudflared'
 
 export default defineConfig({
   plugins: [
@@ -46,7 +46,7 @@ export default defineConfig({
 
 ```javascript
 import { defineConfig } from 'vite'
-import cloudflared from 'vite-plugin-cloudflared'
+import cloudflared from 'vite-plugin-laravel-cloudflared'
 
 export default defineConfig({
   plugins: [
@@ -114,7 +114,7 @@ ingress:
 
 3. Add to your `vite.config.js`:
 ```javascript
-import cloudflared from 'vite-plugin-cloudflared'
+import cloudflared from 'vite-plugin-laravel-cloudflared'
 
 export default defineConfig({
   plugins: [
