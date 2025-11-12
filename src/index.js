@@ -156,23 +156,23 @@ function resolveCloudflaredConfig() {
     const configPath = path.join(process.cwd(), '.cloudflared.yaml')
 
     if (!fs.existsSync(configPath)) {
-        throw new Error('cloudflared-vite-plugin: missing configuration file ".cloudflared.yaml". Create a new tunnel with "php artisan cloudflared:install".')
+        throw new Error('vite-plugin-laravel-cloudflared: missing configuration file ".cloudflared.yaml". Create a new tunnel with "php artisan cloudflared:install".')
     }
 
     const config = yaml.load(fs.readFileSync(configPath, 'utf8'))
 
     if (!config.tunnel) {
-        throw new Error('cloudflared-vite-plugin: missing "tunnel" configuration in the ".cloudflared.yaml" file.')
+        throw new Error('vite-plugin-laravel-cloudflared: missing "tunnel" configuration in the ".cloudflared.yaml" file.')
     }
 
     if (!config.hostname) {
-        throw new Error('cloudflared-vite-plugin: missing "hostname" configuration in the ".cloudflared.yaml" file.')
+        throw new Error('vite-plugin-laravel-cloudflared: missing "hostname" configuration in the ".cloudflared.yaml" file.')
     }
 
     const credentialsFilePath = path.join(os.homedir(), '.cloudflared', `${config.tunnel}.json`)
 
     if (!fs.existsSync(credentialsFilePath)) {
-        throw new Error(`cloudflared-vite-plugin: The credentials file for tunnel "${config.tunnel}" does not exist. Create a new tunnel by running "php artisan cloudflared:install".`)
+        throw new Error(`vite-plugin-laravel-cloudflared: The credentials file for tunnel "${config.tunnel}" does not exist. Create a new tunnel by running "php artisan cloudflared:install".`)
     }
 
     return {
