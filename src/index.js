@@ -9,8 +9,8 @@ import yaml from 'js-yaml'
 
 /**
  * Vite plugin for integrating Cloudflare Tunnel with your development server
- * @param {string|Object} config - Configuration options or tunnel string
- * @param {string} config.logLevel - Log level (default: 'warn')
+ * @param {Object} [config] - Configuration options
+ * @param {string} [config.logLevel='warn'] - Log level for console output ('info'|'warn'|'error')
  * @returns {Object} Vite plugin object
  */
 export default function cloudflared(config = {}) {
@@ -53,7 +53,7 @@ export default function cloudflared(config = {}) {
         resolvedConfig.logger.info('')
 
         if (fs.existsSync(cloudflaredConfig.cloudflaredConfigPath)) {
-            resolvedConfig.logger.error(`  ${colors.red(`➜  ${colors.bold('Error:')}`)} A cloudflared process for tunnel ${colors.cyan(`${cloudflaredConfig.tunnel}`)} is already running.`)
+            resolvedConfig.logger.error(`  ${colors.red(`➜  ${colors.bold('Error:')}`)} A cloudflared process for tunnel ${colors.cyan(`${cloudflaredConfig.name}`)} is already running.`)
             resolvedConfig.logger.error(`  ${colors.red('➜')}  Stop the existing process first if you want to start a new one.`)
             return
         }
@@ -161,34 +161,39 @@ function resolveCloudflaredConfig() {
 
     const config = yaml.load(fs.readFileSync(configPath, 'utf8'))
 
-    if (!config.tunnel) {
-        throw new Error('vite-plugin-laravel-cloudflared: missing "tunnel" configuration in the ".cloudflared.yaml" file.')
+    if (!config.id) {
+        throw new Error('vite-plugin-laravel-cloudflared: missing "id" configuration in the ".cloudflared.yaml" file.')
+    }
+
+    if (!config.name) {
+        throw new Error('vite-plugin-laravel-cloudflared: missing "name" configuration in the ".cloudflared.yaml" file.')
     }
 
     if (!config.hostname) {
         throw new Error('vite-plugin-laravel-cloudflared: missing "hostname" configuration in the ".cloudflared.yaml" file.')
     }
 
-    const credentialsFilePath = path.join(os.homedir(), '.cloudflared', `${config.tunnel}.json`)
+    const credentialsFilePath = path.join(os.homedir(), '.cloudflared', `${config.id}.json`)
 
     if (!fs.existsSync(credentialsFilePath)) {
-        throw new Error(`vite-plugin-laravel-cloudflared: The credentials file for tunnel "${config.tunnel}" does not exist. Create a new tunnel by running "php artisan cloudflared:install".`)
+        throw new Error(`vite-plugin-laravel-cloudflared: The credentials file for tunnel "${config.name}" does not exist. Create a new tunnel by running "php artisan cloudflared:install".`)
     }
 
     return {
-        'tunnel': config.tunnel,
+        'id': config.id,
+        'name': config.name,
         'herdHost': config.hostname,
         'herdUrl': null,
         'viteHost': `vite-${config.hostname}`,
         'viteUrl': null,
         'cloudflaredUrl': null,
         'credentialsFilePath': credentialsFilePath,
-        'cloudflaredConfigPath': path.join(os.homedir(), '.cloudflared', `${config.tunnel}.yaml`),
+        'cloudflaredConfigPath': path.join(os.homedir(), '.cloudflared', `${config.id}.yaml`),
     }
 }
 
 function createCloudflaredConfigFile(config) {
-    const cloudflaredConfigContents = `tunnel: ${config.tunnel}
+    const cloudflaredConfigContents = `tunnel: ${config.id}
 credentials-file: ${config.credentialsFilePath}
 
 ingress:
