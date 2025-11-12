@@ -15,8 +15,8 @@ import yaml from 'js-yaml'
  */
 export default function cloudflared(config = {}) {
     const pluginConfig = resolvePluginConfig(config)
-    const cloudflaredConfig = resolveCloudflaredConfig()
 
+    let cloudflaredConfig
     let resolvedConfig
     let cloudflaredProcess
     let cleaningUpCloudflaredProcess = false
@@ -96,6 +96,10 @@ export default function cloudflared(config = {}) {
             return command === 'serve' && loadEnv(mode, process.cwd(), '').CLOUDFLARED_ENABLED === 'true'
         },
         config(config, { mode }) {
+            if (!cloudflaredConfig) {
+                cloudflaredConfig = resolveCloudflaredConfig()
+            }
+
             const env = loadEnv(mode, process.cwd(), '')
 
             cloudflaredConfig.herdUrl = env.APP_URL
