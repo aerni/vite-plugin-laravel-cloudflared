@@ -173,6 +173,10 @@ function resolveCloudflaredConfig() {
         throw new Error('vite-plugin-laravel-cloudflared: missing "hostname" configuration in the ".cloudflared.yaml" file.')
     }
 
+    if (config.vite !== true) {
+        throw new Error('vite-plugin-laravel-cloudflared: The tunnel was created without a DNS record for Vite. Run "php artisan cloudflared:install" again and enable Vite support, or remove this plugin from your Vite config.')
+    }
+
     const credentialsFilePath = path.join(os.homedir(), '.cloudflared', `${config.id}.json`)
 
     if (!fs.existsSync(credentialsFilePath)) {
