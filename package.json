@@ -1,7 +1,7 @@
 {
     "name": "@aerni/vite-plugin-laravel-cloudflared",
-    "version": "0.1.0",
-    "description": "A Vite plugin for integrating Cloudflare Tunnel with your development server",
+    "version": "1.0.0",
+    "description": "Companion plugin to seamlessly integrate Cloudflared for Laravel with your Vite development server",
     "keywords": [
         "vite",
         "vite-plugin",
