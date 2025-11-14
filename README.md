@@ -1,18 +1,18 @@
 # Cloudflared for Vite
 
-This Vite plugin is the companion to [Cloudflared for Laravel](https://github.com/aerni/laravel-cloudflared). It allows access to your development server via your Cloudflare tunnel with full HMR support.
+A companion Vite plugin for [Cloudflared for Laravel](https://github.com/aerni/laravel-cloudflared) that seamlessly integrates Vite's dev server with your Cloudflare Tunnel. This plugin runs the tunnel and ensures your Vite assets load correctly with full Hot Module Replacement support, making it effortless to test and debug your frontend on any device.
 
-## Requirements
+## Prerequisites
 
-This plugin requires [Cloudflared for Laravel](https://github.com/aerni/laravel-cloudflared). Install that package first.
+This plugin requires [Cloudflared for Laravel](https://github.com/aerni/laravel-cloudflared) as its foundation. Install and configure that package first.
 
 ## Installation
+
+Install the package using npm:
 
 ```bash
 npm install @aerni/vite-plugin-laravel-cloudflared
 ```
-
-## Usage
 
 Add the plugin to your `vite.config.js`:
 
@@ -27,33 +27,44 @@ export default defineConfig({
 })
 ```
 
-Enable the Cloudflare tunnel by setting the `CLOUDFLARED_ENABLED` environment variable. You can either add it to your `.env` file:
-
-```env
-CLOUDFLARED_ENABLED=true
-```
-
-Or create an npm script in `package.json`:
-
-```json
-"scripts": {
-  "dev": "vite",
-  "tunnel": "CLOUDFLARED_ENABLED=true vite"
-}
-```
-
-## Configuration
-
-Configure the plugin's `logLevel` to control console output from the Cloudflare tunnel:
+You can optionally configure the `logLevel` to output more information from the Cloudflare tunnel. Available options are `'info'`, `'warn'` (default), and `'error'`:
 
 ```javascript
 cloudflared({ logLevel: 'info' })
 ```
 
+## Basic Usage
+
+> **Note:** The tunnel only runs when the Vite dev server is running, not during builds.
+
+### Using an npm script (recommended)
+
+Create an npm script in `package.json` to open the tunnel on demand with a simple command:
+
+```json
+"scripts": {
+  "tunnel": "CLOUDFLARED_ENABLED=true vite"
+}
+```
+
+Run `npm run tunnel` to start Vite and open the Cloudflare tunnel.
+
+### Using an environment variable
+
+Alternatively, use an environment variable in your `.env` file to always open the Cloudflare tunnel when the Vite dev server is started:
+
+```env
+CLOUDFLARED_ENABLED=true
+```
+
 ## License
 
-Licensed under the [MIT license](LICENSE.md).
+This package is open-sourced software licensed under the [MIT license](LICENSE.md).
 
 ## Credits
 
-Developed by [Michael Aerni](https://michaelaerni.ch).
+Developed by [Michael Aerni](https://michaelaerni.ch)
+
+## Support
+
+For issues and questions, please use the [GitHub Issues](https://github.com/aerni/vite-plugin-laravel-cloudflared/issues) page.
