@@ -103,7 +103,7 @@ export default function cloudflared(config = {}) {
             const env = loadEnv(mode, process.cwd(), '')
 
             cloudflaredConfig.herdUrl = env.APP_URL
-            cloudflaredConfig.cloudflaredUrl = `${new URL(env.APP_URL).protocol}//${cloudflaredConfig.herdHost}`
+            cloudflaredConfig.cloudflaredUrl = `https://${cloudflaredConfig.herdHost}`
 
             return {
                 server: {
