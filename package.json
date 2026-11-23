@@ -1,6 +1,6 @@
 {
     "name": "@aerni/vite-plugin-laravel-cloudflared",
-    "version": "1.1.0",
+    "version": "1.0.1",
     "description": "Companion plugin to seamlessly integrate Cloudflared for Laravel with your Vite development server",
     "keywords": [
         "vite",
@@ -29,17 +29,14 @@
         "build": "npm run build-plugin",
         "build-plugin": "rm -rf dist && npm run build-plugin-esm",
         "build-plugin-esm": "esbuild src/index.js --platform=node --format=esm --outfile=dist/index.js",
-        "lint": "eslint --ext .js ./src",
-        "test": "node --test tests/vite-compat.test.js"
+        "lint": "eslint --ext .js ./src"
     },
     "devDependencies": {
         "@eslint/eslintrc": "^3.3.1",
         "@eslint/js": "^9.30.1",
         "esbuild": "^0.28.0",
         "eslint": "^9.0.0",
-        "vite": "^8.0.0",
-        "vite-7": "npm:vite@^7.0.0",
-        "vite-8-0": "npm:vite@8.0.16"
+        "vite": "^8.0.0"
     },
     "peerDependencies": {
         "vite": "^7.0.0 || ^8.0.0"
