@@ -6,6 +6,8 @@ A companion Vite plugin for [Cloudflared for Laravel](https://github.com/aerni/l
 
 This plugin requires [Cloudflared for Laravel](https://github.com/aerni/laravel-cloudflared) as its foundation. Install and configure that package first.
 
+Vite 7 and Vite 8 are supported.
+
 ## Installation
 
 Install the package using npm:

@@ -1,4 +1,4 @@
-import { loadEnv, createLogger } from 'vite'
+import { loadEnv, createLogger, version } from 'vite'
 import { spawn, execFileSync } from 'child_process'
 import colors from 'picocolors'
 import fs from 'fs'
@@ -109,11 +109,7 @@ export default function cloudflared(config = {}) {
                 server: {
                     https: false,
                     cors: true,
-                    hmr: {
-                        protocol: "wss",
-                        clientPort: 443,
-                        host: cloudflaredConfig.viteHost,
-                    },
+                    ...websocketServerConfig(cloudflaredConfig.viteHost),
                 },
             }
         },
@@ -150,6 +146,30 @@ function resolvePluginConfig(config) {
     return {
         logLevel: config.logLevel ?? 'warn',
     }
+}
+
+// Vite 8.1 moved the WebSocket host, protocol, and client port from `server.hmr`
+// to `server.ws`. Vite 7 and Vite 8.0 still read those settings from `server.hmr`.
+function websocketServerConfig(viteHost) {
+    const websocket = {
+        protocol: 'wss',
+        clientPort: 443,
+        host: viteHost,
+    }
+
+    if (viteSupportsServerWs(version)) {
+        return { ws: websocket }
+    }
+
+    return { hmr: websocket }
+}
+
+function viteSupportsServerWs(viteVersion) {
+    const [major, minor = '0'] = String(viteVersion ?? '').split('.')
+    const majorVersion = Number.parseInt(major, 10)
+    const minorVersion = Number.parseInt(minor, 10)
+
+    return majorVersion > 8 || (majorVersion === 8 && minorVersion >= 1)
 }
 
 function resolveCloudflaredConfig() {
